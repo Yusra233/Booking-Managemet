@@ -1,16 +1,24 @@
-package com.BookingManagementService.modeldemo.Model;
+package com.BookingManagementService.modeldemo.model;
 
-import com.BookingManagementService.modeldemo.FeignClient.Payable;
+import com.BookingManagementService.modeldemo.feignclient.Payable;
 
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.example.model.*;
 import org.example.model.CustomerRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+
 
 @Service
 public class BookManagementService {
@@ -22,6 +30,7 @@ public class BookManagementService {
 
     @Autowired
     Payable payable;
+    Book book;
 
     private static final Logger logger= LoggerFactory.getLogger(BookManagementService.class);
 
@@ -112,9 +121,9 @@ public class BookManagementService {
         return "Fail to Buy, Book Not Found";
     }
 
-    public String getDetails(String serviceName, double price, String currency){
+    public PaymentRequest getDetails(PaymentRequest paymentRequest){
         logger.info("method to get payment details");
-        return payable.pay(serviceName,price,currency);
+        return payable.pay(paymentRequest);
     }
     public String getInfo(CustomerRequest customerRequest) {
         LocalTime currentTime = LocalTime.now();
@@ -136,4 +145,27 @@ public class BookManagementService {
     public List<CustomerRequest> getCustomerList() {
         return customerList;
     }
-}
+
+    public List<Book> readExcel() throws IOException, InvalidFormatException {
+        FileInputStream file = new FileInputStream(new File("C:\\\\Users\\\\hp\\\\Desktop\\\\Training\\\\Library Excel Sheet\\\\Library.xlsx"));
+        Workbook workbook = WorkbookFactory.create(file);
+        Sheet sheet = workbook.getSheetAt(0);
+        DataFormatter dataFormatter = new DataFormatter();
+        for (int n = 1; n < sheet.getPhysicalNumberOfRows(); n++) {
+            Row row = sheet.getRow(n);
+            Book book1 = new Book();
+            int i = row.getFirstCellNum();
+            book1.setTitle(dataFormatter.formatCellValue(row.getCell(++i)));
+            book1.setAuthor(dataFormatter.formatCellValue(row.getCell(++i)));
+            String typeString = dataFormatter.formatCellValue(row.getCell(++i));
+            try {
+                book1.setType(Book.Type.valueOf(typeString));
+            } catch (IllegalArgumentException e) {
+                System.out.println("DEFAULT");
+            }
+            list.add(book1);
+        }
+        return list;
+    }
+
+    }

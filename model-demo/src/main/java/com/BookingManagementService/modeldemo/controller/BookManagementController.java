@@ -1,19 +1,18 @@
-package com.BookingManagementService.modeldemo.Controller;
+package com.BookingManagementService.modeldemo.controller;
 
-import com.BookingManagementService.modeldemo.Model.BookManagementService;
+import com.BookingManagementService.modeldemo.model.BookManagementService;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.extern.slf4j.Slf4j;
-import org.example.model.Account;
-import org.example.model.Book;
-import org.example.model.ShoppingList;
-import org.example.model.CustomerRequest;
-import org.example.model.Person;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.example.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 @Slf4j
@@ -25,67 +24,72 @@ public class BookManagementController {
     @Autowired
     private BookManagementService bookManagementService;
 
-    @PostMapping("/Bookpost")
+    @PostMapping("/addBook")
     @Operation(tags = "Book Operations",operationId = "post")
     public String addNewBookToList(@RequestBody Book book){
         bookManagementService.addNewBook(book);
         return "Book Added Successfully";
     }
 
-    @PostMapping("/Personpost")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "name", value = "Service Name", defaultValue = "Yusra"),
+            @ApiImplicitParam(name = "age", value = "Price", defaultValue = "23"),
+            @ApiImplicitParam(name = "pid", value = "Currency", defaultValue = "1")
+    })
+    @PostMapping("/addPerson")
     @Operation(tags = "Person Operations",operationId = "post")
     public String addNewPersonToList(@RequestBody Person person){
         bookManagementService.addNewPerson(person);
         return "Person Added Successfully";
     }
 
-    @PostMapping("/Accountpost")
+    @PostMapping("/addAccount")
     @Operation(tags = "Account Operations",operationId = "post")
     public String addNewAccount(@RequestBody Account account){
         bookManagementService.addNewAccount(account);
         return "Account Added Successfully";
     }
 
-    @PostMapping("/Customerpost")
+    @PostMapping("/addCustomer")
     @Operation(tags = "Customer Operations",operationId = "post")
     public String addNewCustomer(@RequestBody CustomerRequest customerRequest){
         return bookManagementService.getInfo(customerRequest);
     }
 
-    @PostMapping("/shoppingListpost")
+    @PostMapping("/addShoppingList")
     @Operation(tags = "ShoppingList Operations",operationId = "post")
     public String buyNewBook(@RequestBody ShoppingList shoppingList){
         logger.info("Buy New Book Operation Done Successfully");
         return bookManagementService.buyBooks(shoppingList);
     }
 
-    @GetMapping("/shoppingListget")
+    @GetMapping("/displayShoppingList")
     @Operation(tags = "ShoppingList Operations",operationId = "get")
     public List<ShoppingList> showAllShoppingList() {
         logger.info("Displaying the shopping list done successfully");
         return bookManagementService.showAllShoppingList();
     }
-    @GetMapping("/Bookget")
+    @GetMapping("/displayBookList")
     @Operation(tags = "Book Operations",operationId = "get")
     public List<Book> showAllList() {
         return bookManagementService.showAllBooks();
     }
 
-    @GetMapping("/Accountget")
+    @GetMapping("/displayAccountList")
     @Operation(tags = "Account Operations",operationId = "get")
     public List<Account> showAllAccounts() {
         logger.info("displaying the account list done successfully");
         return bookManagementService.showAllAccounts();
     }
 
-    @GetMapping("/Personget")
+    @GetMapping("/displayPersonList")
     @Operation(tags = "Person Operations",operationId = "get")
     public List<Person> showAllPersonList() {
         logger.info("displaying the person list done successfully");
         return bookManagementService.showAllPerson();
     }
 
-    @GetMapping("/Customerget")
+    @GetMapping("/displayCustomerList")
     @Operation(tags = "Customer Operations",operationId = "get")
     public List<CustomerRequest> showAllCustomersRequests() {
         logger.info("displaying the CustomerRequest list done successfully");
@@ -98,7 +102,7 @@ public class BookManagementController {
         return bookManagementService.removeById(bid);
     }
 
-    @DeleteMapping("/Persondelete/{pid}")
+    @DeleteMapping("/deletePerson/{pid}")
     @Operation(tags = "Person Operations",operationId = "delete")
     public String deletePersonById(@PathVariable("pid") int pid){
         return bookManagementService.removeByPersonId(pid);
@@ -107,14 +111,19 @@ public class BookManagementController {
 
     @PutMapping("{id}")
     @Operation(tags = "Book Operations",operationId = "put")
-    public String updateBookTitle(@PathVariable("id") int id, @RequestParam String title){
+    public String updateBookTitle(@PathVariable("id") int id,@RequestParam String title){
         return bookManagementService.updateTitle(id,title);
     }
 
     @PostMapping("/pay")
     @Operation(tags = "Payment Operations",operationId = "post")
-    public String pay(@RequestParam String serviceName,@RequestParam double price,@RequestParam String currency){
+    public PaymentRequest pay(@RequestBody PaymentRequest paymentRequest){
         logger.info("payment details gotten successfully");
-        return bookManagementService.getDetails(serviceName,price,currency);
+        return bookManagementService.getDetails(paymentRequest);
+    }
+
+    @GetMapping("getExcel")
+    public List<Book> readFromExcel() throws IOException, InvalidFormatException {
+        return bookManagementService.readExcel();
     }
 }
