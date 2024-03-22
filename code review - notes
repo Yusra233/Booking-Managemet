@@ -1,0 +1,5 @@
+1- Name of the end point in the controller should be verb not noun , so insteand of @PostMapping("/Bookpost") ,should be @PostMapping("/addBook") . Apply this rule for all the end points naming . 
+2- Package name should be small letter , I prefer that 
+
+
+Great work Yusra, Keep it up 
