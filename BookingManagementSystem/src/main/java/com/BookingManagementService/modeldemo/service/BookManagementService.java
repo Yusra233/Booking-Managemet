@@ -1,4 +1,4 @@
-package com.BookingManagementService.modeldemo.model;
+package com.BookingManagementService.modeldemo.service;
 
 import com.BookingManagementService.modeldemo.exception.NotFoundException;
 import com.BookingManagementService.modeldemo.repository.BookRepo;
@@ -11,7 +11,6 @@ import org.example.model.CustomerRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
@@ -20,106 +19,29 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class BookManagementService {
     private List<Book> list=new ArrayList<>();
-    private List<Book> bookList=new ArrayList<>();
     private List<ShoppingList> buylist=new ArrayList<>();
     private List<CustomerRequest> customerList=new ArrayList<>();
-    private List<Account> accountList=new ArrayList<>();
-    private List<Customer> customers=new ArrayList<>();
 
     private Payable payable;
     private BookRepo bookRepo;
     private CustomerRepo customerRepo;
-    private JavaMailSender javaMailSender;
+    private MailService mailService;
 
     @Autowired
-    public BookManagementService(Payable payable, BookRepo bookRepo,CustomerRepo customerRepo,JavaMailSender javaMailSender) {
+    public BookManagementService(Payable payable, BookRepo bookRepo,CustomerRepo customerRepo,MailService mailService) {
         this.payable = payable;
         this.bookRepo = bookRepo;
         this.customerRepo=customerRepo;
-        this.javaMailSender=javaMailSender;
+        this.mailService=mailService;
     }
 
     private static final Logger logger= LoggerFactory.getLogger(BookManagementService.class);
-
-    public List<ShoppingList> showAllShoppingList(){
-        return buylist;
-    }
-
-    public List<Book> addNewBook(Book book){
-        list.add(book);
-        logger.info("AddNewBook Method Done Successfully");
-        return list;
-    }
-
-    public List<Account> addNewAccount(Account account){
-        accountList.add(account);
-        logger.info("AddNewAccount Method Done Successfully");
-        return accountList;
-    }
-
-    public List<Customer> addNewCustomer(Customer customer){
-        customers.add(customer);
-        logger.info("AddNewCustomer Method Done Successfully");
-        return customers;
-    }
-
-    public String removeById(int bid){
-        for (Book m : list) {
-            if (m.getId() == bid) {
-                list.remove(m);
-                logger.info("Book with id: {} ,Removed",bid);
-                return "Book with id: " + bid + " Removed";
-            } }
-        logger.error("No Book with id: {} ,Found",bid);
-        return "No Book with id: " + bid + " Found";
-
-    }
-
-    public String removeByCustomerId(int pid){
-        for (Customer n : customers) {
-            if (n.getId() == pid) {
-                customers.remove(n);
-                logger.info("Customer with id: {} removed",pid);
-                return  "Customer with id: " + pid + " Removed";
-
-            }}
-        logger.error("No customer with id: {} Found",pid);
-        return "No customer with id: " + pid + " Found";
-    }
-
-    public String updateTitle(int id, String title){
-        for (Book m:list){
-            if (m.getId() == id) {
-                m.setTitle(title);
-                logger.info("Book title with id:{} ,updated",id);
-                return "Book Title with id: " + id + " Updated";
-
-            }
-        }
-        logger.error("No Book with id: {} Found to update title on",id);
-        return "No Book with id: " + id + " Found";
-    }
-
-    public List<Book> showAllBooks(){
-        logger.info("ShowAllBooks Method Done Successfully");
-        return list;
-    }
-
-    public List<Account> showAllAccounts(){
-        logger.info("showAllAccounts Method Done Successfully");
-        return accountList;
-    }
-
-    public List<Customer> showAllCustomers(){
-        return customers;
-    }
 
     public String buyBooks(ShoppingList shoppingList){
         for(Book c:list){
@@ -155,13 +77,9 @@ public class BookManagementService {
            return "Status: "+CustomerResponse.Status.SUCCESS + "\nAmount: " + String.valueOf(customerResponse.getAmount()) + "\nTime: " + customerResponse.getTime();
         }}
 
-
-    public List<CustomerRequest> getCustomerList() {
-        return customerList;
-    }
-
-    public String readExcelInDB() {
+    public HashSet<Book> readExcelSheet() {
         FileInputStream file = null;
+        HashSet<Book> uniqueList=new HashSet<>();
         try {
             file = new FileInputStream(new File("D:\\\\Users\\\\hp\\\\Desktop\\\\Training\\\\Library Excel Sheet\\\\Library.xlsx"));
             Workbook workbook = WorkbookFactory.create(file);
@@ -178,67 +96,15 @@ public class BookManagementService {
                     }
                 }
                 if (!isEmpty) {
-                    Book book1 = new Book();
+                    Book book = new Book();
                     int i = row.getFirstCellNum();
-                    book1.setTitle(dataFormatter.formatCellValue(row.getCell(++i)));
-                    book1.setAuthor(dataFormatter.formatCellValue(row.getCell(++i)));
-                    String typeString = dataFormatter.formatCellValue(row.getCell(++i));
-                    book1.setType(Book.Type.valueOf(typeString));
-                    double price = Double.parseDouble(dataFormatter.formatCellValue(row.getCell(++i)));
-                    book1.setPrice(price);
-                    bookRepo.save(book1);
-                }
-            }
-        } catch (FileNotFoundException e) {
-            logger.error("File Not Fount!!");
-            throw new RuntimeException(e);
-        } catch (IOException ex) {
-            logger.error("IOException");
-            throw new RuntimeException(ex);
-        } finally {
-            try {
-                if (file != null) {
-                    file.close();
-                }
-            } catch (IOException e) {
-                logger.error("IOException");
-                System.out.println("IOException found : " + e.getMessage());
-            }
-        }return "Added to DB successfully";
-    }
-
-    public List<Book> readExcel() {
-        FileInputStream file = null;
-        try {
-            file = new FileInputStream(new File("D:\\\\Users\\\\hp\\\\Desktop\\\\Training\\\\Library Excel Sheet\\\\Library.xlsx"));
-            Workbook workbook = WorkbookFactory.create(file);
-            Sheet sheet = workbook.getSheetAt(0);
-            DataFormatter dataFormatter = new DataFormatter();
-            for (int n = 1; n < sheet.getPhysicalNumberOfRows(); n++) {
-                Row row = sheet.getRow(n);
-                boolean isEmpty = true;
-                for (int i = row.getFirstCellNum(); i < row.getLastCellNum(); i++) {
-                    Cell cell = row.getCell(i, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
-                    if (cell.getCellType() != CellType.BLANK) {
-                        isEmpty = false;
-                        break;
-                    }
-                }
-                if (!isEmpty) {
-                    Book book1 = new Book();
-                    int i = row.getFirstCellNum();
-                    book1.setTitle(dataFormatter.formatCellValue(row.getCell(++i)));
-                    book1.setAuthor(dataFormatter.formatCellValue(row.getCell(++i)));
-                    String typeString = dataFormatter.formatCellValue(row.getCell(++i));
-                    try {
-                        book1.setType(Book.Type.valueOf(typeString));
-                    } catch (IllegalArgumentException e) {
-                        logger.error("Illegal Argument Exception");
-                        System.out.println("DEFAULT");
-                    }
-                    double price = Double.parseDouble(dataFormatter.formatCellValue(row.getCell(++i)));
-                    book1.setPrice(price);
-                    bookList.add(book1);
+                    book.setTitle(dataFormatter.formatCellValue(row.getCell(i++)));
+                    book.setAuthor(dataFormatter.formatCellValue(row.getCell(i++)));
+                    String typeString = dataFormatter.formatCellValue(row.getCell(i++));
+                    book.setType(Book.Type.valueOf(typeString));
+                    double price = Double.parseDouble(dataFormatter.formatCellValue(row.getCell(i++)));
+                    book.setPrice(price);
+                    uniqueList.add(book);
                 }
             }
         } catch (FileNotFoundException e) {
@@ -256,6 +122,20 @@ public class BookManagementService {
                 System.out.println("IOException found : " + e.getMessage());
             }
         }
+        return uniqueList;
+    }
+
+    public String addSortedListToDb(){
+        bookRepo.saveAll(sortList());
+        logger.info("Sorted list added to the database successfully.");
+        return "Sorted list added to the database successfully.";
+    }
+
+    public List<Book> sortList(){
+        List<Book> bookList=new ArrayList<>();
+        bookList.addAll(readExcelSheet());
+        Collections.sort(bookList,new BookComp());
+        logger.info("Sorting the database list done successfully.");
         return bookList;
     }
 
@@ -283,7 +163,7 @@ public class BookManagementService {
                     + "Thank you for registering the book \"" + book.getTitle() + "\" from our store.\n\n"+"The amount of "+ bookPrice +" JD has been deducted from your account.\n\n"
                     + "Best regards,\nBookstore";
 
-            sendEmail(customer.getEmail(), subject, text);
+            mailService.sendEmail(customer.getEmail(), subject, text);
             logger.info("Book Registration Done");
             return "Book reserved successfully.";
         } else {
@@ -305,14 +185,4 @@ public class BookManagementService {
         }
     }
 
-    public void sendEmail(String toEmail, String subject, String body){
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("Bookstore <y.kanakri310@gmail.com>");
-            message.setTo(toEmail);
-            message.setText(body);
-            message.setSubject(subject);
-            logger.info("Sending email done");
-
-            javaMailSender.send(message);
-    }
 }
